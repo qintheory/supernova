@@ -13,6 +13,12 @@
 }
 
 .node text {
-  font: 10px sans-serif;
+  font: 4px sans-serif;
   pointer-events: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    margin: 0;
 }

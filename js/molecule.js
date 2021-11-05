@@ -1,29 +1,44 @@
+// set up the html canvas environment 
 var width = window.innerWidth,
     height = window.innerHeight;
 
 var radius = d3.scale.sqrt()
-    .range([0, 6]);
+    .range([0, 6]); // to have a range of 
 
 var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height);
 
+// define force - the physics
+
+// charge: the intensity of the repel force
+// gravity: the tendency of the molecule being attracted to the center of the page
+// link distance: the distance between atoms
+
 var force = d3.layout.force()
     .size([width, height])
     .charge(-50)
-    .gravity(0.05)
+    .gravity(0.06)
     .linkDistance(function(d) { return radius(d.source.size/50) + radius(d.target.size/100); });
 
+// loading the data
 d3.json("data/graph.json", function(error, graph) {
   if (error) throw error;
+    
+// define nodes and links
+  var nodes = graph.nodes, 
+      links = graph.links;
+    
+// apply force to the nodes and links    
   force
-      .nodes(graph.nodes)
-      .links(graph.links)
+      .nodes(nodes)
+      .links(links)
       .on("tick", tick)
       .start();
 
+// create links as SVGs
   var link = svg.selectAll(".link")
-      .data(graph.links)
+      .data(links)
       .enter().append("g")
       .attr("class", "link");
 
@@ -31,11 +46,9 @@ d3.json("data/graph.json", function(error, graph) {
       .style("storke", "#54565A")
       .style("stroke-width", function(d) { return (2 - 1) * 0.2 + "px"; });
 
-//  link.filter(function(d) { return d.bond > 1; }).append("line")
-//      .attr("class", "separator");
-
+// create nodes as SVGs
   var node = svg.selectAll(".node")
-      .data(graph.nodes)
+      .data(nodes)
     .enter().append("g")
       .attr("class", "node")
       .call(force.drag);
@@ -51,14 +64,10 @@ d3.json("data/graph.json", function(error, graph) {
       .text(function(d) { return d.atom; })
       .style("fill", "white");
 
+  // the rendering function  
   function tick() {
       
-    var q = d3.geom.quadtree(graph.nodes),
-      i = 0,
-      n = graph.nodes.length;
-
-    while (++i < n) q.visit(collide(graph.nodes[i]));  
-      
+    // render the lines and nodes   
     link.selectAll("line")
         .attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
@@ -66,20 +75,28 @@ d3.json("data/graph.json", function(error, graph) {
         .attr("y2", function(d) { return d.target.y; });
 
     node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
-  }
+    }
 
+    // render the mouse movements (collision)
+    var q = d3.geom.quadtree(nodes),
+      i = 0,
+      n = nodes.length;
+
+    while (++i < n) q.visit(collide(nodes[i]));     
     svg.on("mousemove", function() {
       var p1 = d3.mouse(this);
-      graph.nodes.px = p1[0];
-      graph.nodes.py = p1[1];
+      nodes.px = p1[0];
+      nodes.py = p1[1];
       force.resume();
     });
     
     force.start();   
 });
 
-  function collide(node) {
-      var r = node.radius + 660,
+
+// Collision - mouse movement
+function collide(node) {
+      var r = node.radius + 16,
           nx1 = node.x - r,
           nx2 = node.x + r,
           ny1 = node.y - r,
